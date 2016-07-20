@@ -24,6 +24,32 @@ game_of_life_iter <- function(x)
   return(X)
 }
 
+generate_data <- function(n, file, size, propMin, propMax, iterMin, iterMax)
+{
+  generate_onedataset <- function(id)
+  {
+    live_prop = runif(1, min = propMin, max = propMax)
+    iter = sample(iterMin:iterMax, size = 1)
+    x = matrix(data = rbinom(n = size^2,size = 1, prob = live_prop), nrow = size)
+    result = c(id,iter, c(x))
+    for(i in 1:iter)
+      x = game_of_life_iter(x = x)
+    
+    result = c(result, c(x))
+    return(result)
+  }
+  
+  result = foreach(i=1:n, .combine = rbind) %dopar%
+    generate_onedataset(i)
+  
+  result = as.data.frame(result)
+  colnames(result) = c("id", "delta", paste0('start.', 1:(size^2)), paste0('stop.', 1:(size^2)))
+  require(feather)
+  write_feather(result, file)
+}
+
+generate_data(n = 500000, file = "R/game-of-life/data/train.feather", size = 20, propMin = 0.05, propMax = 0.5, iterMin = 1, iterMax = 5)
+
 x = matrix(data = rbinom(n = 400,size = 1, prob = 0.4), nrow = 20)
 game_of_life_iter(x)
 
@@ -40,8 +66,8 @@ ggplot(y + 0.5, aes(row,column)) + geom_tile() +
   coord_cartesian(xlim=c(0,20), ylim=c(0,20))
 
 
-x = matrix(data = rbinom(n = 400,size = 1, prob = 0.4), nrow = 20)
-for(i in 1:10)
+x = matrix(data = rbinom(n = 400,size = 1, prob = 0.3), nrow = 20)
+for(i in 1:30)
 {
   y = melt(x, varnames = c('row', 'column'))
   y = y[ y$value == 1, c(1,2)]
